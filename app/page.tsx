@@ -317,6 +317,52 @@ export default function Home() {
     setAuthMessage("Ausgeloggt.");
   }
 
+  async function startCheckout(planName: string) {
+    if (!accessToken) {
+      setAuthMessage("Bitte logge dich zuerst ein, bevor du ein Abo auswählst.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    if (planName === "Free") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    setAuthLoading(true);
+    setAuthMessage("");
+
+    try {
+      const plan =
+        planName === "Creator"
+          ? "creator"
+          : planName === "Power Seller"
+          ? "power_seller"
+          : "";
+
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ plan }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Checkout konnte nicht gestartet werden.");
+      }
+
+      window.location.href = data.url;
+    } catch (error) {
+      setAuthMessage(error instanceof Error ? error.message : "Checkout fehlgeschlagen.");
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
   async function analyze() {
     if (!files.length) return;
 
@@ -831,13 +877,15 @@ export default function Home() {
 
                 <button
                   type="button"
-                  className={`mt-auto rounded-full px-5 py-3 text-sm font-black transition hover:scale-[1.02] ${
+                  onClick={() => startCheckout(plan.name)}
+                  disabled={authLoading}
+                  className={`mt-auto rounded-full px-5 py-3 text-sm font-black transition hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50 ${
                     plan.featured
                       ? "bg-[#d7ff63] text-[#071016]"
                       : "border border-white/10 bg-white/[0.04] text-white hover:border-[#d7ff63]/40"
                   }`}
                 >
-                  {plan.name === "Free" ? "Kostenlos starten" : "Bald verfügbar"}
+                  {plan.name === "Free" ? "Kostenlos starten" : "Auswählen"}
                 </button>
 
                 {plan.name === "Free" && (
