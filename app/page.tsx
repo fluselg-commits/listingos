@@ -363,6 +363,38 @@ export default function Home() {
     }
   }
 
+  async function openCustomerPortal() {
+    if (!accessToken) {
+      setAuthMessage("Bitte logge dich zuerst ein.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    setAuthLoading(true);
+    setAuthMessage("");
+
+    try {
+      const res = await fetch("/api/stripe/portal", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Kundenportal konnte nicht geöffnet werden.");
+      }
+
+      window.location.href = data.url;
+    } catch (error) {
+      setAuthMessage(error instanceof Error ? error.message : "Kundenportal konnte nicht geöffnet werden.");
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
   async function analyze() {
     if (!files.length) return;
 
@@ -475,13 +507,26 @@ export default function Home() {
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={signOut}
-                className="rounded-full border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-black text-white transition hover:border-red-300/40 hover:text-red-200"
-              >
-                Logout
-              </button>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                {profile?.plan !== "free" && profile?.plan !== "admin" && (
+                  <button
+                    type="button"
+                    onClick={openCustomerPortal}
+                    disabled={authLoading}
+                    className="rounded-full bg-[#d7ff63] px-5 py-3 text-sm font-black text-[#071016] transition hover:scale-[1.02] disabled:opacity-50"
+                  >
+                    Abo verwalten
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={signOut}
+                  className="rounded-full border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-black text-white transition hover:border-red-300/40 hover:text-red-200"
+                >
+                  Logout
+                </button>
+              </div>
             </div>
           ) : (
             <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr] lg:items-end">
