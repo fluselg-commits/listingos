@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import imageCompression from "browser-image-compression";
 
@@ -120,6 +120,55 @@ export default function Home() {
     () => files.slice(0, 3).map((file) => URL.createObjectURL(file)),
     [files]
   );
+
+  useEffect(() => {
+    let isMounted = true;
+    let cleanup: undefined | (() => void);
+
+    async function restoreSession() {
+      try {
+        const { createBrowserSupabaseClient } = await import("../lib/supabaseClient");
+        const supabase = createBrowserSupabaseClient();
+
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!isMounted) return;
+
+        if (session?.access_token) {
+          setAccessToken(session.access_token);
+          await loadProfile(session.access_token);
+        }
+
+        const {
+          data: { subscription },
+        } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+          if (!isMounted) return;
+
+          if (newSession?.access_token) {
+            setAccessToken(newSession.access_token);
+            await loadProfile(newSession.access_token);
+          } else {
+            setAccessToken("");
+            setUserEmail("");
+            setProfile(null);
+          }
+        });
+
+        cleanup = () => subscription.unsubscribe();
+      } catch (error) {
+        console.error("Session konnte nicht wiederhergestellt werden:", error);
+      }
+    }
+
+    restoreSession();
+
+    return () => {
+      isMounted = false;
+      if (cleanup) cleanup();
+    };
+  }, []);
 
   const hashtags = result?.listing?.hashtags?.join(" ") || "";
   const allListing = [
@@ -1124,27 +1173,9 @@ export default function Home() {
           </button>
         </motion.section>
 
-        <footer className="pb-8 pt-2 text-center text-sm text-[#566272]">
-  <div className="mb-3 font-bold uppercase tracking-[0.25em]">
-    ListingOS · Built for Vinted Resellers
-  </div>
-
-  <div className="flex justify-center gap-6">
-    <a
-      href="/impressum"
-      className="transition hover:text-[#d7ff63]"
-    >
-      Impressum
-    </a>
-
-    <a
-      href="/datenschutz"
-      className="transition hover:text-[#d7ff63]"
-    >
-      Datenschutz
-    </a>
-  </div>
-</footer>
+        <footer className="pb-8 pt-2 text-center text-xs font-bold uppercase tracking-[0.25em] text-[#566272]">
+          ListingOS · Built for Vinted Resellers
+        </footer>
       </section>
     </main>
   );
