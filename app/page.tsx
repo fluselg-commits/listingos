@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import imageCompression from "browser-image-compression";
 
 type Result = {
   analysis?: Record<string, string | string[] | undefined>;
@@ -395,6 +396,36 @@ export default function Home() {
     }
   }
 
+  async function compressImages(inputFiles: File[]) {
+    const options = {
+      maxSizeMB: 0.8,
+      maxWidthOrHeight: 1200,
+      useWebWorker: true,
+      fileType: "image/jpeg",
+      initialQuality: 0.72,
+    };
+
+    return Promise.all(
+      inputFiles.map(async (file) => {
+        try {
+          const compressedFile = await imageCompression(file, options);
+
+          return new File(
+            [compressedFile],
+            file.name.replace(/\.[^/.]+$/, "") + "-compressed.jpg",
+            {
+              type: "image/jpeg",
+              lastModified: Date.now(),
+            }
+          );
+        } catch (error) {
+          console.error("Bild konnte nicht komprimiert werden:", error);
+          return file;
+        }
+      })
+    );
+  }
+
   async function analyze() {
     if (!files.length) return;
 
@@ -408,7 +439,8 @@ export default function Home() {
 
     try {
       const formData = new FormData();
-      files.slice(0, 3).forEach((file) => formData.append("images", file));
+      const compressedFiles = await compressImages(files.slice(0, 3));
+      compressedFiles.forEach((file) => formData.append("images", file));
       formData.append("notes", notes);
 
       const res = await fetch("/api/analyze", {
@@ -653,7 +685,7 @@ export default function Home() {
                 ↑
               </div>
               <p className="text-lg font-black">{isDragging ? "Bilder loslassen" : "Bilder auswählen"}</p>
-              <p className="mt-1 text-xs text-[#8fa0b2]">Klicken oder Bilder hier reinziehen</p>
+              <p className="mt-1 text-xs text-[#8fa0b2]">Klicken oder Bilder hier reinziehen</p>\n              <p className="mt-2 text-[11px] font-bold text-[#d7ff63]/80">Bilder werden automatisch komprimiert</p>
             </label>
 
             {previews.length > 0 && (
@@ -761,7 +793,7 @@ export default function Home() {
 
             {loading && (
               <div className="rounded-[2rem] border border-white/10 bg-[#101721] p-6">
-                <p className="text-sm font-black uppercase tracking-[0.2em] text-[#d7ff63]">KI analysiert deine Bilder</p>
+                <p className="text-sm font-black uppercase tracking-[0.2em] text-[#d7ff63]">Bilder werden komprimiert & analysiert</p>
                 <div className="mt-5 space-y-3">
                   <div className="h-12 animate-pulse rounded-xl bg-[#1a2330]" />
                   <div className="h-32 animate-pulse rounded-xl bg-[#1a2330]" />
