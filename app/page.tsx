@@ -114,6 +114,12 @@ export default function Home() {
   const [userEmail, setUserEmail] = useState("");
   const [profile, setProfile] = useState<Profile | null>(null);
 
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackRating, setFeedbackRating] = useState(5);
+  const [feedbackText, setFeedbackText] = useState("");
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState("");
+
   const [purchasePrice, setPurchasePrice] = useState("12");
 
   const previews = useMemo(
@@ -517,6 +523,53 @@ export default function Home() {
       setResult({ error: "Die Analyse ist fehlgeschlagen." });
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function sendFeedback() {
+    const text = feedbackText.trim();
+
+    if (!text) {
+      setFeedbackMessage("Bitte schreibe kurz dein Feedback dazu.");
+      return;
+    }
+
+    setFeedbackLoading(true);
+    setFeedbackMessage("");
+
+    try {
+      const res = await fetch("/api/feedback", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
+        body: JSON.stringify({
+          rating: feedbackRating,
+          message: text,
+          email: userEmail || authEmail || "",
+          plan: profile?.plan || "unbekannt",
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Feedback konnte nicht gesendet werden.");
+      }
+
+      setFeedbackMessage("Danke! Dein Feedback wurde gesendet.");
+      setFeedbackText("");
+      setFeedbackRating(5);
+
+      setTimeout(() => {
+        setFeedbackOpen(false);
+        setFeedbackMessage("");
+      }, 1400);
+    } catch (error) {
+      setFeedbackMessage(error instanceof Error ? error.message : "Feedback konnte nicht gesendet werden.");
+    } finally {
+      setFeedbackLoading(false);
     }
   }
 
@@ -1188,6 +1241,91 @@ export default function Home() {
           </div>
         </footer>
       </section>
+
+      <button
+        type="button"
+        onClick={() => setFeedbackOpen(true)}
+        className="fixed bottom-5 right-5 z-50 rounded-full bg-[#d7ff63] px-5 py-4 text-sm font-black text-[#071016] shadow-[0_18px_60px_rgba(215,255,99,0.28)] transition hover:scale-105"
+      >
+        Feedback geben
+      </button>
+
+      {feedbackOpen && (
+        <div className="fixed inset-0 z-[60] grid place-items-center bg-black/70 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-[2rem] border border-white/10 bg-[#101721] p-6 shadow-[0_30px_120px_rgba(0,0,0,0.55)]">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.25em] text-[#d7ff63]">
+                  Feedback
+                </p>
+                <h3 className="mt-2 text-3xl font-black tracking-[-0.04em]">
+                  Wie gefällt dir ListingOS?
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-[#8fa0b2]">
+                  Deine Rückmeldung hilft, ListingOS besser zu machen.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setFeedbackOpen(false)}
+                className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-xl font-black text-white transition hover:border-red-300/40 hover:text-red-200"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="mt-6">
+              <p className="mb-2 text-xs font-black uppercase tracking-[0.2em] text-[#8fa0b2]">
+                Sternebewertung
+              </p>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setFeedbackRating(star)}
+                    className={`text-4xl transition hover:scale-110 ${
+                      star <= feedbackRating ? "text-[#d7ff63]" : "text-[#344050]"
+                    }`}
+                    aria-label={`${star} Sterne`}
+                  >
+                    ★
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <label className="mt-6 block">
+              <span className="mb-2 block text-xs font-black uppercase tracking-[0.2em] text-[#8fa0b2]">
+                Dein Feedback *
+              </span>
+              <textarea
+                value={feedbackText}
+                onChange={(e) => setFeedbackText(e.target.value)}
+                placeholder="Was gefällt dir? Was fehlt noch? Was soll verbessert werden?"
+                className="min-h-36 w-full resize-none rounded-2xl border border-white/10 bg-[#0a1018] p-4 text-sm text-white outline-none transition placeholder:text-[#647184] focus:border-[#d7ff63]"
+              />
+            </label>
+
+            {feedbackMessage && (
+              <p className="mt-3 rounded-2xl border border-white/10 bg-[#0a1018] p-3 text-sm text-[#aab6c3]">
+                {feedbackMessage}
+              </p>
+            )}
+
+            <button
+              type="button"
+              onClick={sendFeedback}
+              disabled={feedbackLoading || !feedbackText.trim()}
+              className="mt-5 w-full rounded-2xl bg-[#d7ff63] px-5 py-4 text-sm font-black uppercase tracking-[0.16em] text-[#071016] transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {feedbackLoading ? "Wird gesendet ..." : "Feedback absenden"}
+            </button>
+          </div>
+        </div>
+      )}
+
     </main>
   );
 }
