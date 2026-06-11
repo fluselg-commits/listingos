@@ -1173,8 +1173,19 @@ export default function Home() {
           </button>
         </motion.section>
 
-        <footer className="pb-8 pt-2 text-center text-xs font-bold uppercase tracking-[0.25em] text-[#566272]">
-          ListingOS · Built for Vinted Resellers
+        <footer className="pb-8 pt-2 text-center text-sm text-[#566272]">
+          <div className="mb-3 font-bold uppercase tracking-[0.25em]">
+            ListingOS · Built for Vinted Resellers
+          </div>
+
+          <div className="flex justify-center gap-6">
+            <a href="/impressum" className="transition hover:text-[#d7ff63]">
+              Impressum
+            </a>
+            <a href="/datenschutz" className="transition hover:text-[#d7ff63]">
+              Datenschutz
+            </a>
+          </div>
         </footer>
       </section>
     </main>
