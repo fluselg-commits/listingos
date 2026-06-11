@@ -1018,9 +1018,7 @@ export default function Home() {
                 Kostenlos starten. Upgrade, wenn du mehr brauchst.
               </h3>
             </div>
-            <p className="max-w-sm text-sm leading-6 text-[#aab6c3]">
-              Free zum Testen. Creator und Power Seller werden nach Stripe-Anbindung aktiviert.
-            </p>
+            
           </div>
 
           <div className="grid gap-4 lg:grid-cols-3">
